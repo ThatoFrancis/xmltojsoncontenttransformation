@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<judgment xmlns="urn:lex:content:1">
+  <header>
+    <content_id>FR-2024-CA-000999</content_id>
+    <title>Cour d'appel de Lyon, date invalide</title>
+    <court>Cour d'appel de Lyon</court>
+    <jurisdiction>FR</jurisdiction>
+    <decision_date>not-a-date</decision_date>
+  </header>
+  <body>
+    <section type="facts">
+      <p>Paragraphe sans identifiant.</p>
+    </section>
+  </body>
+</judgment>
