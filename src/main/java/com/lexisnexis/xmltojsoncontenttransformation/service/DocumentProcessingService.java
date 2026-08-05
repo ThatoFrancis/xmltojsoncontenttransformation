@@ -16,8 +16,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -31,7 +33,10 @@ public class DocumentProcessingService {
     private final ArtifactRepository artifactRepository;
     private final AppProperties properties;
 
-    public ProcessingRecord process(String xml) {
+    public record ProcessingResult(ProcessingRecord record, boolean duplicate) {
+    }
+
+    public ProcessingResult process(String xml) {
         long size = xml.getBytes(StandardCharsets.UTF_8).length;
         long limit = properties.getPipeline().getMaxDocumentSizeBytes();
         if (size > limit) {
@@ -48,7 +53,7 @@ public class DocumentProcessingService {
         if (existing != null && contentHash.equals(existing.getContentHash())
                 && existing.getStatus() == ProcessingStatus.PUBLISHED) {
             log.info("Duplicate submission for {}, skipping republish", contentId);
-            return existing;
+            return new ProcessingResult(existing, true);
         }
 
         Instant receivedAt = Instant.now();
@@ -58,13 +63,13 @@ public class DocumentProcessingService {
 
         if (hasErrors) {
             log.warn("Rejected {} with {} diagnostic(s)", contentId, diagnostics.size());
-            return recordRepository.save(ProcessingRecord.builder()
+            return new ProcessingResult(recordRepository.save(ProcessingRecord.builder()
                     .contentId(contentId)
                     .status(ProcessingStatus.REJECTED)
                     .contentHash(contentHash)
                     .receivedAt(receivedAt)
                     .diagnostics(diagnostics)
-                    .build());
+                    .build()), false);
         }
 
         var result = transformationService.transform(xml);
@@ -72,24 +77,28 @@ public class DocumentProcessingService {
         artifactRepository.store(contentId, ArtifactType.FULL_TEXT, result.fullText());
 
         log.info("Published {}", contentId);
-        return recordRepository.save(ProcessingRecord.builder()
+        return new ProcessingResult(recordRepository.save(ProcessingRecord.builder()
                 .contentId(contentId)
                 .status(ProcessingStatus.PUBLISHED)
                 .contentHash(contentHash)
                 .receivedAt(receivedAt)
                 .publishedAt(Instant.now())
                 .diagnostics(diagnostics)
-                .build());
+                .build()), false);
     }
 
-    public boolean isDuplicate(String xml) {
-        String contentId = contentIdExtractor.extract(xml).orElse(null);
-        if (contentId == null) {
-            return false;
-        }
+    public Optional<ProcessingRecord> findByContentId(String contentId) {
+        return recordRepository.findByContentId(contentId);
+    }
+
+    public Collection<ProcessingRecord> findAll() {
+        return recordRepository.findAll();
+    }
+
+    public Optional<String> retrievePublishedArtifact(String contentId, ArtifactType type) {
         return recordRepository.findByContentId(contentId)
-                .map(r -> sha256(xml).equals(r.getContentHash()) && r.getStatus() == ProcessingStatus.PUBLISHED)
-                .orElse(false);
+                .filter(r -> r.getStatus() == ProcessingStatus.PUBLISHED)
+                .flatMap(r -> artifactRepository.retrieve(contentId, type));
     }
 
     private String sha256(String content) {

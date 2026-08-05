@@ -1,13 +1,9 @@
 package com.lexisnexis.xmltojsoncontenttransformation.controller;
 
 import com.lexisnexis.xmltojsoncontenttransformation.constant.ArtifactType;
-import com.lexisnexis.xmltojsoncontenttransformation.constant.ProcessingStatus;
 import com.lexisnexis.xmltojsoncontenttransformation.dto.DocumentResponse;
-import com.lexisnexis.xmltojsoncontenttransformation.entity.ProcessingRecord;
 import com.lexisnexis.xmltojsoncontenttransformation.exception.DocumentNotFoundException;
 import com.lexisnexis.xmltojsoncontenttransformation.mapper.ProcessingRecordMapper;
-import com.lexisnexis.xmltojsoncontenttransformation.repository.ArtifactRepository;
-import com.lexisnexis.xmltojsoncontenttransformation.repository.ProcessingRecordRepository;
 import com.lexisnexis.xmltojsoncontenttransformation.service.DocumentProcessingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,27 +27,24 @@ import java.util.List;
 public class DocumentController {
 
     private final DocumentProcessingService processingService;
-    private final ProcessingRecordRepository recordRepository;
-    private final ArtifactRepository artifactRepository;
     private final ProcessingRecordMapper mapper;
 
     @Operation(summary = "Submit a single XML document for processing")
     @PostMapping(consumes = {MediaType.APPLICATION_XML_VALUE, MediaType.TEXT_XML_VALUE},
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<DocumentResponse> submit(@RequestBody String xml) {
-        boolean duplicate = processingService.isDuplicate(xml);
-        ProcessingRecord record = processingService.process(xml);
-        HttpStatus status = switch (record.getStatus()) {
+        var result = processingService.process(xml);
+        HttpStatus status = switch (result.record().getStatus()) {
             case REJECTED -> HttpStatus.UNPROCESSABLE_ENTITY;
-            default -> duplicate ? HttpStatus.OK : HttpStatus.CREATED;
+            default -> result.duplicate() ? HttpStatus.OK : HttpStatus.CREATED;
         };
-        return ResponseEntity.status(status).body(mapper.toResponse(record, duplicate));
+        return ResponseEntity.status(status).body(mapper.toResponse(result.record(), result.duplicate()));
     }
 
     @Operation(summary = "List processing status of all submitted documents")
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public List<DocumentResponse> list() {
-        return recordRepository.findAll().stream()
+        return processingService.findAll().stream()
                 .map(mapper::toResponse)
                 .toList();
     }
@@ -59,7 +52,7 @@ public class DocumentController {
     @Operation(summary = "Get processing status and diagnostics for a document")
     @GetMapping(value = "/{contentId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public DocumentResponse status(@PathVariable String contentId) {
-        return recordRepository.findByContentId(contentId)
+        return processingService.findByContentId(contentId)
                 .map(mapper::toResponse)
                 .orElseThrow(() -> new DocumentNotFoundException(contentId));
     }
@@ -67,8 +60,7 @@ public class DocumentController {
     @Operation(summary = "Retrieve the published normalized JSON artifact")
     @GetMapping(value = "/{contentId}/json", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> normalizedJson(@PathVariable String contentId) {
-        requirePublished(contentId);
-        return artifactRepository.retrieve(contentId, ArtifactType.NORMALIZED_JSON)
+        return processingService.retrievePublishedArtifact(contentId, ArtifactType.NORMALIZED_JSON)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new DocumentNotFoundException(contentId));
     }
@@ -76,15 +68,8 @@ public class DocumentController {
     @Operation(summary = "Retrieve the published plain-text artifact for AI/RAG")
     @GetMapping(value = "/{contentId}/text", produces = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<String> fullText(@PathVariable String contentId) {
-        requirePublished(contentId);
-        return artifactRepository.retrieve(contentId, ArtifactType.FULL_TEXT)
+        return processingService.retrievePublishedArtifact(contentId, ArtifactType.FULL_TEXT)
                 .map(ResponseEntity::ok)
-                .orElseThrow(() -> new DocumentNotFoundException(contentId));
-    }
-
-    private void requirePublished(String contentId) {
-        recordRepository.findByContentId(contentId)
-                .filter(r -> r.getStatus() == ProcessingStatus.PUBLISHED)
                 .orElseThrow(() -> new DocumentNotFoundException(contentId));
     }
 }
