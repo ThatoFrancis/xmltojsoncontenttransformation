@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<judgment xmlns="urn:lex:content:1">
+  <header>
+    <content_id>FR-2024-CA-BAD001</content_id>
+    <title>Document sans date valide</title>
+    <court>Cour d'appel de Nancy</court>
+    <jurisdiction>FR</jurisdiction>
+    <decision_date>pas-une-date</decision_date>
+  </header>
+  <body>
+    <section type="facts">
+      <p id="p1">Contenu...</p>
+    </section>
+  </body>
+</judgment>

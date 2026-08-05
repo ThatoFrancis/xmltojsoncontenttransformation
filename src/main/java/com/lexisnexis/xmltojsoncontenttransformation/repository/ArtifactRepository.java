@@ -6,7 +6,7 @@ import java.util.Optional;
 
 public interface ArtifactRepository {
 
-    void store(String contentId, ArtifactType type, String content);
+    void store(String contentId, ArtifactType type, String content, String collection);
 
-    Optional<String> retrieve(String contentId, ArtifactType type);
+    Optional<String> retrieve(String contentId, ArtifactType type, String collection);
 }

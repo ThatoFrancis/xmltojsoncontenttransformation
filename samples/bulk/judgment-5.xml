@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<judgment xmlns="urn:lex:content:1">
+  <header>
+    <content_id>FR-2024-CA-000205</content_id>
+    <title>Cour d'appel de Paris, 12 mars 2024, affaire 5</title>
+    <court>Cour d'appel de Paris</court>
+    <jurisdiction>FR</jurisdiction>
+    <decision_date>2024-03-12</decision_date>
+    <citations>
+      <citation type="ECLI">ECLI:FR:CA10005</citation>
+    </citations>
+    <parties>
+      <party role="appellant">Societe 5 SARL</party>
+      <party role="respondent">M. Martin</party>
+    </parties>
+  </header>
+  <body>
+    <section type="facts">
+      <p id="p1">Le litige numero 5 porte sur un differend commercial...</p>
+    </section>
+    <section type="reasons">
+      <p id="p2">Considerant que les elements du dossier 5...</p>
+      <p id="p3">Attendu que la partie appelante...</p>
+    </section>
+    <section type="disposition">
+      <p id="p4">Par ces motifs, la cour statue sur l'affaire 5...</p>
+    </section>
+  </body>
+</judgment>

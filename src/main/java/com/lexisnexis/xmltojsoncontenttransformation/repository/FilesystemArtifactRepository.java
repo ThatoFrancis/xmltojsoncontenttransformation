@@ -26,9 +26,9 @@ public class FilesystemArtifactRepository implements ArtifactRepository {
     }
 
     @Override
-    public void store(String contentId, ArtifactType type, String content) {
+    public void store(String contentId, ArtifactType type, String content, String collection) {
         try {
-            Path dir = resolveContentDir(contentId);
+            Path dir = resolveContentDir(contentId, collection);
             Files.createDirectories(dir);
             Files.writeString(dir.resolve(type.getFileName()), content, StandardCharsets.UTF_8);
         } catch (IOException e) {
@@ -37,8 +37,8 @@ public class FilesystemArtifactRepository implements ArtifactRepository {
     }
 
     @Override
-    public Optional<String> retrieve(String contentId, ArtifactType type) {
-        Path file = resolveContentDir(contentId).resolve(type.getFileName());
+    public Optional<String> retrieve(String contentId, ArtifactType type, String collection) {
+        Path file = resolveContentDir(contentId, collection).resolve(type.getFileName());
         if (!Files.exists(file)) {
             return Optional.empty();
         }
@@ -49,9 +49,10 @@ public class FilesystemArtifactRepository implements ArtifactRepository {
         }
     }
 
-    // guard against path traversal via a malicious content_id
-    private Path resolveContentDir(String contentId) {
-        Path dir = outputDir.resolve(contentId).normalize();
+    // guard against path traversal via a malicious content_id or collection name
+    private Path resolveContentDir(String contentId, String collection) {
+        Path base = collection == null || collection.isBlank() ? outputDir : outputDir.resolve(collection);
+        Path dir = base.resolve(contentId).normalize();
         if (!dir.startsWith(outputDir.normalize())) {
             throw new ArtifactStorageException("Invalid content id: " + contentId, null);
         }

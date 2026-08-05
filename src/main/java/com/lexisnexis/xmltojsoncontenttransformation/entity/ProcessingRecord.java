@@ -15,6 +15,7 @@ public class ProcessingRecord {
     private String contentId;
     private ProcessingStatus status;
     private String contentHash;
+    private String collection;
     private Instant receivedAt;
     private Instant publishedAt;
     private List<DiagnosticDto> diagnostics;
