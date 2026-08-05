@@ -1,0 +1,5 @@
+app:
+  pipeline:
+    concurrency: ${APP_PIPELINE_CONCURRENCY:8}
+  storage:
+    output-dir: ${APP_STORAGE_OUTPUT_DIR:/data/output}

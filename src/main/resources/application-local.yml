@@ -1,0 +1,7 @@
+app:
+  storage:
+    output-dir: ./output
+
+logging:
+  level:
+    com.lexisnexis.xmltojsoncontenttransformation: DEBUG
