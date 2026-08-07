@@ -8,8 +8,31 @@ app:
   pipeline:
     concurrency: 4
     max-document-size-bytes: 10485760
+    batch-collection: bulk
+  transform:
+    stylesheet: xslt/judgment-to-json.xsl
+    schema: schema/judgment.xsd
   storage:
+    type: filesystem
     output-dir: ./output
+    normalized-json-file-name: normalized.json
+    full-text-file-name: fulltext.txt
+  registry:
+    type: in-memory
+    table: xmltojson-processing-records
+  security:
+    api-key: ""            # empty = filter disabled (local dev)
+    api-key-header: X-API-Key
+    protected-path-prefix: /api/
+  metrics:
+    cloudwatch-enabled: false
+    cloudwatch-namespace: xmltojson
+    cloudwatch-step: PT1M
+  docs:
+    title: XML-to-JSON Content Transformation Service
+    description: Ingests legal XML judgments, validates against XSD, transforms to normalized JSON via XSLT 3.0 (Saxon-HE) and publishes artifacts for downstream search/RAG.
+    version: "1.0"
+    security-scheme-name: apiKey
 
 management:
   endpoints:

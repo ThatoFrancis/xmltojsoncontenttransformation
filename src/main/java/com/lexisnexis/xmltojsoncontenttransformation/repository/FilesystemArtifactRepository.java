@@ -3,6 +3,7 @@ package com.lexisnexis.xmltojsoncontenttransformation.repository;
 import com.lexisnexis.xmltojsoncontenttransformation.config.AppProperties;
 import com.lexisnexis.xmltojsoncontenttransformation.constant.ArtifactType;
 import com.lexisnexis.xmltojsoncontenttransformation.exception.ArtifactStorageException;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.io.IOException;
@@ -12,12 +13,15 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 @Repository
+@ConditionalOnProperty(name = "app.storage.type", havingValue = "filesystem", matchIfMissing = true)
 public class FilesystemArtifactRepository implements ArtifactRepository {
 
     private final Path outputDir;
+    private final AppProperties.Storage storage;
 
     public FilesystemArtifactRepository(AppProperties properties) {
-        this.outputDir = Path.of(properties.getStorage().getOutputDir());
+        this.storage = properties.getStorage();
+        this.outputDir = Path.of(storage.getOutputDir());
         try {
             Files.createDirectories(outputDir);
         } catch (IOException e) {
@@ -30,7 +34,7 @@ public class FilesystemArtifactRepository implements ArtifactRepository {
         try {
             Path dir = resolveContentDir(contentId, collection);
             Files.createDirectories(dir);
-            Files.writeString(dir.resolve(type.getFileName()), content, StandardCharsets.UTF_8);
+            Files.writeString(dir.resolve(storage.fileNameFor(type)), content, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new ArtifactStorageException("Failed to store artifact for " + contentId, e);
         }
@@ -38,7 +42,7 @@ public class FilesystemArtifactRepository implements ArtifactRepository {
 
     @Override
     public Optional<String> retrieve(String contentId, ArtifactType type, String collection) {
-        Path file = resolveContentDir(contentId, collection).resolve(type.getFileName());
+        Path file = resolveContentDir(contentId, collection).resolve(storage.fileNameFor(type));
         if (!Files.exists(file)) {
             return Optional.empty();
         }

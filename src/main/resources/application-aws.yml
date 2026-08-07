@@ -1,0 +1,18 @@
+app:
+  pipeline:
+    concurrency: ${APP_PIPELINE_CONCURRENCY:4}
+  storage:
+    type: s3
+    bucket: ${APP_STORAGE_BUCKET}
+  registry:
+    type: ${APP_REGISTRY_TYPE:dynamodb}
+    table: ${APP_REGISTRY_TABLE:xmltojson-processing-records}
+  security:
+    api-key: ${APP_SECURITY_API_KEY:}
+  metrics:
+    cloudwatch-enabled: ${APP_METRICS_CLOUDWATCH:true}
+
+# the service sits behind a TLS-terminating reverse proxy (Caddy);
+# honor X-Forwarded-* so generated URLs (e.g. Swagger) use https
+server:
+  forward-headers-strategy: framework
