@@ -1,5 +1,6 @@
 package com.lexisnexis.xmltojsoncontenttransformation.service;
 
+import com.lexisnexis.xmltojsoncontenttransformation.config.AppProperties;
 import com.lexisnexis.xmltojsoncontenttransformation.constant.ArtifactType;
 import com.lexisnexis.xmltojsoncontenttransformation.constant.BatchStatus;
 import com.lexisnexis.xmltojsoncontenttransformation.entity.BatchJob;
@@ -9,13 +10,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 class BatchProcessingServiceTest {
@@ -86,6 +100,44 @@ class BatchProcessingServiceTest {
     void unknownDirectoryIsRejected() {
         assertThatThrownBy(() -> batchService.submit(inputDir.resolve("missing").toString()))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void s3InputIsRejectedWhenS3StorageIsNotEnabled() {
+        assertThatThrownBy(() -> batchService.submit("s3://some-bucket/bulk"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("s3 storage");
+    }
+
+    @Test
+    void s3InputListsAndProcessesXmlObjects() throws Exception {
+        S3Client s3 = mock(S3Client.class);
+        when(s3.listObjectsV2Paginator(any(ListObjectsV2Request.class)))
+                .thenAnswer(inv -> new ListObjectsV2Iterable(s3, inv.getArgument(0)));
+        when(s3.listObjectsV2(any(ListObjectsV2Request.class)))
+                .thenReturn(ListObjectsV2Response.builder()
+                        .contents(S3Object.builder().key("bulk/s3-doc.xml").build(),
+                                S3Object.builder().key("bulk/readme.txt").build())
+                        .isTruncated(false)
+                        .build());
+        when(s3.getObjectAsBytes(any(GetObjectRequest.class)))
+                .thenReturn(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(),
+                        judgment("S3-DOC-1").getBytes(StandardCharsets.UTF_8)));
+
+        @SuppressWarnings("unchecked")
+        org.springframework.beans.factory.ObjectProvider<S3Client> provider =
+                mock(org.springframework.beans.factory.ObjectProvider.class);
+        when(provider.getIfAvailable()).thenReturn(s3);
+        AppProperties props = new AppProperties();
+        props.getPipeline().setBatchCollection("bulk");
+        BatchProcessingService s3Batch = new BatchProcessingService(
+                processingService, Executors.newFixedThreadPool(2), provider, props);
+
+        BatchJob job = s3Batch.submit("s3://input-bucket/bulk");
+        awaitCompletion(job);
+
+        assertThat(job.getTotalFiles()).isEqualTo(1);
+        assertThat(job.getPublished().get()).isEqualTo(1);
     }
 
     private void awaitCompletion(BatchJob job) throws InterruptedException {
