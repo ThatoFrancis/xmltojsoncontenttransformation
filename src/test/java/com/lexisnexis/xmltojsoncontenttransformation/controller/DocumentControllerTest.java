@@ -19,6 +19,7 @@ import java.nio.file.Path;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -112,6 +113,29 @@ class DocumentControllerTest {
     void unknownDocumentReturns404() throws Exception {
         mockMvc.perform(get("/api/documents/does-not-exist"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @Order(7)
+    void uploadedFileIsProcessedLikeRawBody() throws Exception {
+        var file = new org.springframework.mock.web.MockMultipartFile(
+                "file", "judgment.xml", MediaType.APPLICATION_XML_VALUE,
+                readResource("/valid-judgment.xml").getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/documents/upload").file(file))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contentId").value("FR-2024-CA-000123"))
+                .andExpect(jsonPath("$.status").value("PUBLISHED"));
+    }
+
+    @Test
+    @Order(8)
+    void emptyUploadIsRejected() throws Exception {
+        var file = new org.springframework.mock.web.MockMultipartFile(
+                "file", "empty.xml", MediaType.APPLICATION_XML_VALUE, new byte[0]);
+
+        mockMvc.perform(multipart("/api/documents/upload").file(file))
+                .andExpect(status().isBadRequest());
     }
 
     private String readResource(String name) throws IOException {

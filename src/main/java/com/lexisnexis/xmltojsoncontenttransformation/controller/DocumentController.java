@@ -16,8 +16,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -33,6 +38,24 @@ public class DocumentController {
     @PostMapping(consumes = {MediaType.APPLICATION_XML_VALUE, MediaType.TEXT_XML_VALUE},
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<DocumentResponse> submit(@RequestBody String xml) {
+        return process(xml);
+    }
+
+    @Operation(summary = "Submit a single XML document as a file upload")
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<DocumentResponse> upload(@RequestPart("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("Uploaded file is empty");
+        }
+        try {
+            return process(new String(file.getBytes(), StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not read uploaded file", e);
+        }
+    }
+
+    private ResponseEntity<DocumentResponse> process(String xml) {
         var result = processingService.process(xml);
         HttpStatus status = switch (result.record().getStatus()) {
             case REJECTED -> HttpStatus.UNPROCESSABLE_ENTITY;
