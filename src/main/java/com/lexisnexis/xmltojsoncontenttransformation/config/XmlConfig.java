@@ -25,16 +25,19 @@ public class XmlConfig {
 
     // compiled once at startup, XsltExecutable is thread-safe and reusable
     @Bean
-    public XsltExecutable judgmentToJsonStylesheet(Processor saxonProcessor) throws SaxonApiException, IOException {
+    public XsltExecutable judgmentToJsonStylesheet(Processor saxonProcessor, AppProperties properties)
+            throws SaxonApiException, IOException {
         XsltCompiler compiler = saxonProcessor.newXsltCompiler();
-        return compiler.compile(new StreamSource(new ClassPathResource("xslt/judgment-to-json.xsl").getInputStream()));
+        return compiler.compile(new StreamSource(
+                new ClassPathResource(properties.getTransform().getStylesheet()).getInputStream()));
     }
 
     @Bean
-    public Schema judgmentSchema() throws SAXException, IOException {
+    public Schema judgmentSchema(AppProperties properties) throws SAXException, IOException {
         SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         factory.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
         factory.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-        return factory.newSchema(new StreamSource(new ClassPathResource("schema/judgment.xsd").getInputStream()));
+        return factory.newSchema(new StreamSource(
+                new ClassPathResource(properties.getTransform().getSchema()).getInputStream()));
     }
 }

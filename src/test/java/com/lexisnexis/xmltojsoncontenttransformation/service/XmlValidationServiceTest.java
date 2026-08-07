@@ -1,5 +1,6 @@
 package com.lexisnexis.xmltojsoncontenttransformation.service;
 
+import com.lexisnexis.xmltojsoncontenttransformation.config.AppProperties;
 import com.lexisnexis.xmltojsoncontenttransformation.config.XmlConfig;
 import com.lexisnexis.xmltojsoncontenttransformation.dto.DiagnosticDto;
 import org.junit.jupiter.api.BeforeAll;
@@ -17,7 +18,9 @@ class XmlValidationServiceTest {
 
     @BeforeAll
     static void setUp() throws Exception {
-        service = new XmlValidationService(new XmlConfig().judgmentSchema());
+        AppProperties properties = new AppProperties();
+        properties.getTransform().setSchema("schema/judgment.xsd");
+        service = new XmlValidationService(new XmlConfig().judgmentSchema(properties));
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.lexisnexis.xmltojsoncontenttransformation.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lexisnexis.xmltojsoncontenttransformation.config.AppProperties;
 import com.lexisnexis.xmltojsoncontenttransformation.config.XmlConfig;
 import net.sf.saxon.s9api.Processor;
 import org.junit.jupiter.api.BeforeAll;
@@ -19,9 +20,12 @@ class XmlTransformationServiceTest {
 
     @BeforeAll
     static void setUp() throws Exception {
+        AppProperties properties = new AppProperties();
+        properties.getTransform().setStylesheet("xslt/judgment-to-json.xsl");
         XmlConfig config = new XmlConfig();
         Processor processor = config.saxonProcessor();
-        service = new XmlTransformationService(processor, config.judgmentToJsonStylesheet(processor), objectMapper);
+        service = new XmlTransformationService(processor,
+                config.judgmentToJsonStylesheet(processor, properties), objectMapper);
     }
 
     @Test
