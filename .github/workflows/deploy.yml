@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: configure aws credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::434767530207:role/github-actions-ecr-push
           aws-region: ${{ env.AWS_REGION }}
